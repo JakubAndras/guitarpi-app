@@ -3,25 +3,26 @@ import 'dart:async';
 import 'package:bc_ui_flutter/model/AppColors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../utils/BluetoothSupport.dart';
 
+import '../presentation/providers.dart';
 import '../widget/CustomPageBackground.dart';
-import '../model/BluetoothServer.dart';
 import './DiscoveryPage.dart';
 import './SelectBondedDevicePage.dart';
 
-class ConnectionPage extends StatefulWidget {
+class ConnectionPage extends ConsumerStatefulWidget {
   final Function switchToMainPage;
 
   const ConnectionPage({super.key, required this.switchToMainPage});
 
   @override
-  State<ConnectionPage> createState() => _ConnectionPage();
+  ConsumerState<ConnectionPage> createState() => _ConnectionPage();
 }
 
-class _ConnectionPage extends State<ConnectionPage> {
+class _ConnectionPage extends ConsumerState<ConnectionPage> {
   BluetoothState _bluetoothState = BluetoothState.UNKNOWN;
 
   Timer? _discoverableTimeoutTimer;
@@ -171,7 +172,8 @@ class _ConnectionPage extends State<ConnectionPage> {
                       showBluetoothUnsupported(context);
                       return;
                     }
-                    BluetoothServer.server = await Navigator.of(context).push(
+                    final BluetoothDevice? selected =
+                        await Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (context) {
                           return SelectBondedDevicePage(
@@ -181,9 +183,13 @@ class _ConnectionPage extends State<ConnectionPage> {
                     );
 
                     if (!context.mounted) return;
-                    if (BluetoothServer.server != null) {
-                      debugPrint('Connect -> selected ${BluetoothServer.server!.address}');
-                      _start(context, BluetoothServer.server!);
+                    if (selected != null) {
+                      debugPrint('Connect -> selected ${selected.address}');
+                      // Publish the chosen device's address so the pedalboard
+                      // notifier can connect to it (replaces BluetoothServer).
+                      ref.read(selectedDeviceAddressProvider.notifier).state =
+                          selected.address;
+                      _start(context, selected);
                     } else {
                       debugPrint('Connect -> no device selected');
                     }

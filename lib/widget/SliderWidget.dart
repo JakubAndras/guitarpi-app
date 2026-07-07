@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:bc_ui_flutter/widget/CustomSliderThumbCircle.dart';
 
-import '../model/SliderController.dart';
-
+/// A single parameter slider. Its authoritative value comes from the caller
+/// ([currentValue], sourced from the pedalboard state); local [_currentValue]
+/// only tracks the in-progress drag. On release it reports the final integer
+/// value through [onChangeEnd]. No more global `SliderController` state.
 // ignore: must_be_immutable
 class SliderWidget extends StatefulWidget {
   final double sliderHeight;
@@ -10,12 +12,10 @@ class SliderWidget extends StatefulWidget {
   final int max;
   double currentValue;
   final String name;
-  final String parentName;
   final Color color;
 
-  final Function updateLevelValue;
-  final Function setCurrentPresetToNull;
-  final Function sendData;
+  /// Called with the final (0..100) value when the drag ends.
+  final void Function(int value) onChangeEnd;
 
   SliderWidget({
     required Key key,
@@ -23,11 +23,8 @@ class SliderWidget extends StatefulWidget {
     this.max = 100,
     this.min = 0,
     required this.name,
-    required this.updateLevelValue,
-    required this.setCurrentPresetToNull,
-    required this.sendData,
+    required this.onChangeEnd,
     required this.currentValue,
-    required this.parentName,
     required this.color,
   }) : super(key: key);
 
@@ -49,13 +46,12 @@ class _SliderWidgetState extends State<SliderWidget>
   }
 
   @override
-  void dispose() {
-    super.dispose();
-  }
-
-  @override
   void didUpdateWidget(SliderWidget oldWidget) {
-    _currentValue = SliderController().getSliderValueByParameterName(widget.parentName);
+    // Reflect external value changes (e.g. selecting a preset) that arrive via
+    // the pedalboard state.
+    if (widget.currentValue != oldWidget.currentValue) {
+      _currentValue = widget.currentValue;
+    }
     super.didUpdateWidget(oldWidget);
   }
 
@@ -131,15 +127,8 @@ class _SliderWidgetState extends State<SliderWidget>
                     onChangeEnd: (value) {
                       setState(() {
                         _currentValue = value;
-
-                        widget.setCurrentPresetToNull();
-
-                        widget.updateLevelValue(widget.name, (_currentValue).toInt());
-                        SliderController().setSliderValueByParameterName(
-                            widget.parentName, _currentValue);
-
-                        widget.sendData();
                       });
+                      widget.onChangeEnd(_currentValue.toInt());
                     },
                   ),
                 ),

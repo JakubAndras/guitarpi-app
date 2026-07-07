@@ -1,30 +1,37 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility that Flutter provides. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// Placeholder smoke test — replaced with real coverage in the tests phase.
+// Exercises the pure wire-format serializer (no Flutter/plugin dependencies).
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:bc_ui_flutter/main.dart';
+import 'package:bc_ui_flutter/domain/entities/effect.dart';
+import 'package:bc_ui_flutter/domain/entities/parameter.dart';
+import 'package:bc_ui_flutter/domain/entities/pedalboard.dart';
+import 'package:bc_ui_flutter/data/dto/pedalboard_wire_dto.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(MyApp());
+  test('pedalboardToWireJson produces the expected wire shape', () {
+    const state = PedalboardState(
+      isActive: true,
+      chain: [
+        Effect(
+          name: 'Echo',
+          color: Color(0xFF000000),
+          isActive: true,
+          parameters: [Parameter(name: 'LEVEL', value: 42)],
+        ),
+      ],
+    );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    final json = pedalboardToWireJson(state);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(json['isPedalBoardActive'], true);
+    final effects = json['effects'] as List;
+    expect(effects.length, 1);
+    expect(effects.first['name'], 'Echo');
+    expect(effects.first['order'], 0);
+    expect(effects.first['parameters'], [
+      {'name': 'LEVEL', 'value': 42},
+    ]);
   });
 }

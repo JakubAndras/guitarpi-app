@@ -1,95 +1,70 @@
-import 'dart:convert';
-
 import 'package:bc_ui_flutter/model/AppColors.dart';
-import 'package:bc_ui_flutter/model/EffectPresetModel.dart';
-import 'package:bc_ui_flutter/utils/PresetSharedPreferences.dart';
 import 'package:decorated_icon/decorated_icon.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../model/SliderController.dart';
+import '../domain/entities/effect.dart';
+import '../domain/entities/parameter.dart';
+import '../domain/entities/preset.dart';
+import '../presentation/providers.dart';
 import './SliderWidget.dart';
 
-// ignore: must_be_immutable
-class EffectWidget extends StatefulWidget {
+/// A single effect card. All effect state (on/off, parameter values) is read
+/// from `pedalboardProvider`; only the currently selected preset and the loaded
+/// preset list are local UI state. Presets are loaded/saved through
+/// `presetRepositoryProvider`.
+class EffectWidget extends ConsumerStatefulWidget {
   final String name;
-  late bool isActive;
-  final Color color;
-  final VoidCallback? onClickedRemove;
-  final VoidCallback? onClickedMoveToLeft;
-  final VoidCallback? onClickedMoveToRight;
-  final Function sendData;
-  late List<PresetModel> presets;
-  PresetModel? currentPreset;
-  late bool canMoveLeft, canMoveRight;
+  final bool canMoveLeft;
+  final bool canMoveRight;
 
-  List<ParameterModel> parameters;
-
-  EffectWidget(
-      {required this.name,
-      required this.parameters,
-      required this.color,
-      required this.onClickedRemove,
-      required this.onClickedMoveToLeft,
-      required this.onClickedMoveToRight,
-      required this.sendData,
-      required Key key})
-      : super(key: key) {
-    isActive = false;
-  }
+  const EffectWidget({
+    required this.name,
+    required this.canMoveLeft,
+    required this.canMoveRight,
+    required Key key,
+  }) : super(key: key);
 
   @override
-  State<EffectWidget> createState() => _EffectWidgetState();
+  ConsumerState<EffectWidget> createState() => _EffectWidgetState();
 }
 
-class _EffectWidgetState extends State<EffectWidget>
+class _EffectWidgetState extends ConsumerState<EffectWidget>
     with AutomaticKeepAliveClientMixin {
+  List<Preset> presets = [];
+  Preset? currentPreset;
+
   @override
   bool get wantKeepAlive => true;
 
   @override
   void initState() {
-    String? jsonEffectPresetModel =
-        PresetSharedPreferences.getAllEffectPresets(widget.name);
-    if (jsonEffectPresetModel != null) {
-      EffectPresetModel effectPresetModel =
-          EffectPresetModel.fromJson(jsonDecode(jsonEffectPresetModel));
-      widget.presets = effectPresetModel.presets;
-    } else {
-      widget.presets = [];
-    }
-
     super.initState();
+    presets = ref.read(presetRepositoryProvider).presetsFor(widget.name);
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  @override
-  void didUpdateWidget(EffectWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-  }
+  /// The effect this card renders, from the current pedalboard state.
+  Effect get _effect => ref
+      .read(pedalboardProvider)
+      .chain
+      .firstWhere((e) => e.name == widget.name);
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
-    return buildWidget();
-  }
-
-  _sendData() {
-    if (widget.isActive) {
-      widget.sendData();
-    }
-  }
-
-  Widget buildWidget() {
     super.build(context);
 
     final isPortrait =
         MediaQuery.of(context).orientation == Orientation.portrait;
     final mobileWidth = MediaQuery.of(context).size.width;
     final mobileHeight = MediaQuery.of(context).size.height;
+
+    // Rebuild when this effect's state changes (on/off, parameter values).
+    final effect = ref.watch(pedalboardProvider.select(
+      (s) => s.chain.firstWhere((e) => e.name == widget.name),
+    ));
+    final notifier = ref.read(pedalboardProvider.notifier);
+    final color = effect.color;
+    final isActive = effect.isActive;
 
     return Padding(
       padding: isPortrait
@@ -102,7 +77,7 @@ class _EffectWidgetState extends State<EffectWidget>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(15.0),
             side: BorderSide(
-              color: widget.isActive == true ? widget.color : Colors.white12,
+              color: isActive == true ? color : Colors.white12,
               width: 2.5,
             ),
           ),
@@ -145,7 +120,7 @@ class _EffectWidgetState extends State<EffectWidget>
                               ),
                             ],
                           ),
-                          onPressed: widget.onClickedRemove,
+                          onPressed: () => notifier.removeEffect(widget.name),
                         ),
                       ),
                     ),
@@ -166,7 +141,7 @@ class _EffectWidgetState extends State<EffectWidget>
                             Shadow(
                               offset: Offset(2, 2),
                               blurRadius: 8.0,
-                              color: widget.color,
+                              color: color,
                             ),
                           ],
                         ),
@@ -182,7 +157,7 @@ class _EffectWidgetState extends State<EffectWidget>
                         height: isPortrait ? 26 : 16,
                         child: Container(
                           decoration: BoxDecoration(
-                              color: widget.isActive == true
+                              color: isActive == true
                                   ? Colors.green
                                   : Colors.grey,
                               border: Border.all(
@@ -194,7 +169,7 @@ class _EffectWidgetState extends State<EffectWidget>
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                    color: widget.isActive == true
+                                    color: isActive == true
                                         ? Colors.green
                                         : Colors.transparent,
                                     offset: const Offset(0.0, 0.0),
@@ -228,7 +203,7 @@ class _EffectWidgetState extends State<EffectWidget>
                         size: isPortrait ? 32 : 22,
                         shadows: const [],
                       ),
-                      onPressed: widget.onClickedMoveToLeft,
+                      onPressed: () => notifier.moveLeft(widget.name),
                     ),
                     SizedBox(
                       width:
@@ -246,7 +221,7 @@ class _EffectWidgetState extends State<EffectWidget>
                         size: isPortrait ? 32 : 22,
                         shadows: const [],
                       ),
-                      onPressed: widget.onClickedMoveToRight,
+                      onPressed: () => notifier.moveRight(widget.name),
                     ),
                   ],
                 ),
@@ -259,8 +234,8 @@ class _EffectWidgetState extends State<EffectWidget>
                 child: Center(
                   child: Column(
                     children: [
-                      for (ParameterModel parameter in widget.parameters)
-                        createSliderWidget(parameter, isPortrait)
+                      for (Parameter parameter in effect.parameters)
+                        createSliderWidget(parameter, isPortrait, color)
                     ],
                   ),
                 ),
@@ -287,18 +262,18 @@ class _EffectWidgetState extends State<EffectWidget>
                             ? const EdgeInsets.fromLTRB(15, 4, 5, 4)
                             : const EdgeInsets.fromLTRB(8, 0, 0, 0),
                         child: DropdownButton<String>(
-                          value: widget.currentPreset?.name,
+                          value: currentPreset?.name,
                           iconSize: isPortrait ? 32 : 20,
                           elevation: 8,
                           isExpanded: true,
                           isDense: false,
                           underline: Container(
                             height: 1.5,
-                            color: widget.color,
+                            color: color,
                           ),
                           items: isPortrait
-                              ? widget.presets.map(buildPresetItem).toList()
-                              : widget.presets
+                              ? presets.map(buildPresetItem).toList()
+                              : presets
                                   .map(buildPresetItemLandscape)
                                   .toList(),
                           onChanged: (name) => selectPreset(name),
@@ -341,7 +316,7 @@ class _EffectWidgetState extends State<EffectWidget>
                             : const EdgeInsets.fromLTRB(0, 10, 0, 0),
                         icon: DecoratedIcon(
                           Icons.delete,
-                          color: widget.currentPreset == null
+                          color: currentPreset == null
                               ? AppColors.secondaryColor
                               : AppColors.white,
                           size: isPortrait ? 30 : 22,
@@ -370,7 +345,7 @@ class _EffectWidgetState extends State<EffectWidget>
               ),
               // ON/OFF button
               Padding(
-                padding: widget.isActive == true
+                padding: isActive == true
                     ? (isPortrait
                         ? const EdgeInsets.fromLTRB(0, 25, 0, 0)
                         : const EdgeInsets.fromLTRB(0, 12, 0, 0))
@@ -388,8 +363,8 @@ class _EffectWidgetState extends State<EffectWidget>
                         ),
                         boxShadow: [
                           BoxShadow(
-                              color: widget.isActive == true
-                                  ? widget.color
+                              color: isActive == true
+                                  ? color
                                   : Colors.transparent,
                               offset: const Offset(0.0, 4.0),
                               blurRadius: 7.0,
@@ -398,31 +373,13 @@ class _EffectWidgetState extends State<EffectWidget>
                     ),
                     child: Stack(
                       children: <Widget>[
-                        /*Row(
-                          children: <Widget>[
-                            SizedBox(
-                              width: isPortrait ? mobileWidth - 56 : mobileWidth * 0.26,
-                              height: mobileHeight * 0.26,
-                              child: Align(
-                                    alignment: Alignment.center,
-                                    child: Icon(
-                                        Icons.play_circle_outline,
-                                      size: 55,
-                                      color: widget.isActive ? Colors.white : Colors.grey,
-                                    ))
-
-                            ),
-                          ],
-                        ),*/
                         SizedBox.expand(
                           child: Material(
                             type: MaterialType.transparency,
                             child: InkWell(
                               onTap: () {
-                                setState(() {
-                                  widget.isActive = !widget.isActive;
-                                  widget.sendData();
-                                });
+                                notifier.setEffectActive(
+                                    widget.name, !isActive);
                               },
                             ),
                           ),
@@ -439,7 +396,7 @@ class _EffectWidgetState extends State<EffectWidget>
     );
   }
 
-  Widget createSliderWidget(ParameterModel parameter, bool isPortrait) {
+  Widget createSliderWidget(Parameter parameter, bool isPortrait, Color color) {
     return Padding(
       padding: isPortrait
           ? const EdgeInsets.fromLTRB(0, 8, 0, 0)
@@ -451,30 +408,21 @@ class _EffectWidgetState extends State<EffectWidget>
             isPortrait ? 45 : MediaQuery.of(context).size.width * 0.034,
         min: 0,
         max: 100,
-        updateLevelValue: updateParameterValue,
-        setCurrentPresetToNull: setCurrentPresetToNull,
-        sendData: _sendData,
-        currentValue: SliderController()
-            .getSliderValueByParameterName('${widget.name}_${parameter.name}'),
-        parentName: '${widget.name}_${parameter.name}',
-        color: widget.color,
+        currentValue: parameter.value.toDouble(),
+        color: color,
+        onChangeEnd: (value) {
+          setState(() {
+            currentPreset = null;
+          });
+          ref
+              .read(pedalboardProvider.notifier)
+              .setParameter(widget.name, parameter.name, value);
+        },
       ),
     );
   }
 
-  updateParameterValue(String parameterName, int value) {
-    widget.parameters
-        .firstWhere((element) => element.name == parameterName)
-        .value = value;
-  }
-
-  setCurrentPresetToNull() {
-    setState(() {
-      widget.currentPreset = null;
-    });
-  }
-
-  DropdownMenuItem<String> buildPresetItem(PresetModel item) =>
+  DropdownMenuItem<String> buildPresetItem(Preset item) =>
       DropdownMenuItem(
         value: item.name,
         child: ListTile(
@@ -489,7 +437,7 @@ class _EffectWidgetState extends State<EffectWidget>
         ),
       );
 
-  DropdownMenuItem<String> buildPresetItemLandscape(PresetModel item) =>
+  DropdownMenuItem<String> buildPresetItemLandscape(Preset item) =>
       DropdownMenuItem(
         value: item.name,
         child: Padding(
@@ -526,45 +474,30 @@ class _EffectWidgetState extends State<EffectWidget>
                 TextFormField(
                   maxLength: 12,
                   initialValue: '',
-                  onFieldSubmitted: (name) {
+                  onFieldSubmitted: (name) async {
                     if (name == "") {
                       return;
                     }
-                    for (PresetModel preset in widget.presets) {
-                      if (preset.name == name) {
-                        return;
-                      }
+                    if (presets.any((preset) => preset.name == name)) {
+                      return;
                     }
                     Navigator.of(context).pop();
+
+                    final parameters = _effect.parameters
+                        .map((p) => Parameter(name: p.name, value: p.value))
+                        .toList();
+                    final newPreset =
+                        Preset(name: name, parameters: parameters);
+                    final updated = [...presets, newPreset];
+
+                    await ref
+                        .read(presetRepositoryProvider)
+                        .savePresets(widget.name, updated);
+
+                    if (!mounted) return;
                     setState(() {
-                      late List<ParameterModel> parameters = [];
-                      for (ParameterModel parameter in widget.parameters) {
-                        parameters.add(
-                            ParameterModel(parameter.name, parameter.value));
-                      }
-                      PresetModel newPreset =
-                          PresetModel(name, widget.parameters);
-                      widget.presets.add(newPreset);
-                      EffectPresetModel updatedPresets =
-                          EffectPresetModel(widget.name, widget.presets);
-
-                      String jsonPresets = jsonEncode(updatedPresets);
-                      PresetSharedPreferences.setAllEffectPresets(jsonPresets);
-
-                      widget.currentPreset = newPreset;
-
-                      // from init -> reload needed
-                      String? jsonEffectPresetModel =
-                          PresetSharedPreferences.getAllEffectPresets(
-                              widget.name);
-                      if (jsonEffectPresetModel != null) {
-                        EffectPresetModel effectPresetModel =
-                            EffectPresetModel.fromJson(
-                                jsonDecode(jsonEffectPresetModel));
-                        widget.presets = effectPresetModel.presets;
-                      } else {
-                        widget.presets = [];
-                      }
+                      presets = updated;
+                      currentPreset = newPreset;
                     });
                   },
                 ),
@@ -576,35 +509,30 @@ class _EffectWidgetState extends State<EffectWidget>
     );
   }
 
-  void deletePreset() {
+  void deletePreset() async {
+    final target = currentPreset;
+    if (target == null) return;
+    final updated = presets.where((p) => p != target).toList();
+    await ref
+        .read(presetRepositoryProvider)
+        .savePresets(widget.name, updated);
+    if (!mounted) return;
     setState(() {
-      widget.presets.remove(widget.currentPreset);
-      widget.currentPreset = null;
-
-      EffectPresetModel updatedPresets =
-          EffectPresetModel(widget.name, widget.presets);
-
-      String jsonPresets = jsonEncode(updatedPresets);
-      PresetSharedPreferences.setAllEffectPresets(jsonPresets);
+      presets = updated;
+      currentPreset = null;
     });
   }
 
-  // unic preset needed
   void selectPreset(String? name) {
     if (name == null) {
       return;
     }
+    final preset = presets.firstWhere((element) => element.name == name);
     setState(() {
-      widget.currentPreset =
-          widget.presets.firstWhere((element) => element.name == name);
-      for (int i = 0; i < widget.currentPreset!.parameters.length; i++) {
-        widget.parameters.elementAt(i).value =
-            widget.currentPreset!.parameters.elementAt(i).value;
-        SliderController().setSliderValueByParameterName(
-            '${widget.name}_${widget.parameters.elementAt(i).name}',
-            widget.currentPreset!.parameters.elementAt(i).value.toDouble());
-      }
+      currentPreset = preset;
     });
-    _sendData();
+    ref
+        .read(pedalboardProvider.notifier)
+        .applyPreset(widget.name, preset.parameters);
   }
 }

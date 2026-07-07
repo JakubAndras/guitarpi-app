@@ -2,38 +2,32 @@ import 'package:bc_ui_flutter/page/ConnectionPage.dart';
 import 'package:bc_ui_flutter/page/MainPage.dart';
 import 'package:bc_ui_flutter/page/HelpPage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class HomePage extends StatefulWidget {
+import 'presentation/providers.dart';
+
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  ConsumerState<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends ConsumerState<HomePage> {
   int currentIndex = 0;
 
-  late ConnectionPage connectionPage;
-  late MainPage mainPage;
-  late HelpPage helpPage;
-  List<Widget> screens = [];
+  late final List<Widget> screens = [
+    ConnectionPage(switchToMainPage: switchToMainPage),
+    const MainPage(),
+    HelpPage(),
+  ];
 
-  _HomePageState() {
-    connectionPage = ConnectionPage(switchToMainPage: switchToMainPage);
-    mainPage = MainPage();
-    helpPage = HelpPage();
-
-    screens = [
-      connectionPage,
-      mainPage,
-      helpPage,
-    ];
-  }
-
-  switchToMainPage() {
+  void switchToMainPage() {
+    // Trigger the connection through the notifier instead of holding the page
+    // State, then move to the pedalboard tab.
+    ref.read(pedalboardProvider.notifier).connect();
     setState(() {
       currentIndex = 1;
-      mainPage.initConnection();
     });
   }
 
