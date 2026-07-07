@@ -39,6 +39,11 @@ dependencies:
   decorated_icon: ^1.2.1
   wakelock_plus: ^1.2.5
 
+  # State management + dependency injection.
+  flutter_riverpod: ^2.5.1
+  # Value equality for immutable domain entities (no codegen).
+  equatable: ^2.0.5
+
 
 # Pin transitive 'file' to a Dart 3 compatible version. The old 6.1.2 pulled in
 # by shared_preferences_linux/windows fails to compile against the Dart 3.9 SDK
@@ -49,13 +54,15 @@ dependency_overrides:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # Mocking for unit tests (transport/repository).
+  mocktail: ^1.0.4
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.1
 
 flutter_launcher_icons:

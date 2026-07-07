@@ -66,8 +66,8 @@ class _MainPage extends State<MainPage> {
   void initConnection() {
     if (!isBluetoothSupported) return;
     BluetoothConnection.toAddress(BluetoothServer.server?.address)
-        .then((connection) {
-      connection = connection;
+        .then((newConnection) {
+      connection = newConnection;
       setState(() {
         isConnecting = false;
         isDisconnecting = false;
