@@ -357,3 +357,37 @@ chybí vrstvení, doména, správa stavu i testovatelnost a je porušena depende
 Doporučení: **postupný refactor** dle §6 — začít úklidem a opravou bugu B1, poté zavést
 doménu + transport abstrakci + Riverpod. Není nutné přepisovat vše najednou; klíčové je
 zavést hranice mezi UI, doménou a infrastrukturou, od nichž se dá dál stavět (včetně iOS).
+
+---
+
+## 9. Realizace refactoru (stav)
+
+Refactor byl proveden na větvi `refactor/clean-architecture`, po fázích, s ověřovací branou
+(`flutter analyze` + `flutter test`) mezi každou fází. **Fáze 0–4 hotové; Fáze 5 (iOS BLE)
+záměrně mimo rozsah** (vyžaduje hardware a změnu firmwaru na Pi).
+
+| Fáze | Stav | Obsah |
+|---|:---:|---|
+| 0 — úklid | ✅ | smazán mrtvý kód (`MainPageTest`, `PresetPage`, `data/EffectPreset`), opraven bug B1, přidány `flutter_riverpod`/`equatable`/`mocktail`, bump `flutter_lints ^6`. |
+| 1 — doména + data | ✅ | immutable entity (`Parameter`/`Preset`/`Effect`/`PedalboardState`) s `equatable` (bez codegenu — místo freezed), `EffectTransport` + `PresetRepository` rozhraní, jejich implementace, wire DTO. |
+| 2 — stav + DI | ✅ | Riverpod: `PedalboardNotifier` (jediný zdroj pravdy), providery pro transport/repo/vybrané zařízení; **odstraněny statiky** `SliderController` a `BluetoothServer`; zrušen antipattern držení `State`. |
+| 3 — UI | ✅ | `EffectWidget` (610 ř.) rozdělen na `EffectCard` + header/reorder/preset/parameter subwidgety; portrait/landscape sjednoceny přes `PedalboardMetrics`; sdílený `PedalboardToggle`. |
+| 4 — kvalita | ✅ | 42 unit/widget testů (doména, wire formát, notifier včetně send-sémantiky, preset repo, app smoke). |
+| 5 — iOS BLE | ⛔ | mimo rozsah; transport rozhraní je ale připravené (`flutter_blue_plus` impl. + BLE firmware na Pi). |
+
+### Odchylky od původního plánu §6
+- **Bez `freezed`/codegenu** — použity ruční immutable třídy + `equatable`. Robustnější
+  pro automatizovaný běh (žádný `build_runner` krok, který může selhat). freezed lze doplnit
+  později.
+- Wire JSON formát zachován **byte-for-byte** (firmware na Pi na něm závisí).
+
+### Ověřeno
+- `flutter analyze` → **No issues found!**
+- `flutter test` → **42 testů prošlo**
+- `flutter build ios --debug` → **build OK** (podepsáno, `Runner.app`)
+
+### Neověřeno (bez hardwaru)
+Reálné chování přes Bluetooth na Raspberry Pi — Riverpod wiring je pokrytý unit testy
+(notifier + send-sémantika), ale end-to-end s fyzickým Pi nebylo možné otestovat.
+Vizuální identita UI po sjednocení orientací se opírá o zachování hodnot 1:1 (`PedalboardMetrics`),
+doporučeno vizuálně porověřit na zařízení.
