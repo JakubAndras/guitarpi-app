@@ -1,37 +1,65 @@
-// Placeholder smoke test — replaced with real coverage in the tests phase.
-// Exercises the pure wire-format serializer (no Flutter/plugin dependencies).
+// Minimal app smoke test.
+//
+// We pump the real app but force a non-Android target platform so the
+// Bluetooth-only code paths (ConnectionPage.initState, effectTransportProvider)
+// resolve to their no-op / unsupported variants and never touch a plugin. The
+// transport is additionally overridden with a fake for belt-and-braces, and
+// SharedPreferences is seeded so the preset repository is safe to construct.
+//
+// The pure wire-format serializer has dedicated coverage in
+// test/data/pedalboard_wire_dto_test.dart.
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:bc_ui_flutter/domain/entities/effect.dart';
-import 'package:bc_ui_flutter/domain/entities/parameter.dart';
-import 'package:bc_ui_flutter/domain/entities/pedalboard.dart';
-import 'package:bc_ui_flutter/data/dto/pedalboard_wire_dto.dart';
+import 'package:bc_ui_flutter/app.dart';
+import 'package:bc_ui_flutter/domain/repositories/effect_transport.dart';
+import 'package:bc_ui_flutter/presentation/providers.dart';
+import 'package:bc_ui_flutter/utils/PresetSharedPreferences.dart';
+
+class MockEffectTransport extends Mock implements EffectTransport {}
 
 void main() {
-  test('pedalboardToWireJson produces the expected wire shape', () {
-    const state = PedalboardState(
-      isActive: true,
-      chain: [
-        Effect(
-          name: 'Echo',
-          color: Color(0xFF000000),
-          isActive: true,
-          parameters: [Parameter(name: 'LEVEL', value: 42)],
-        ),
-      ],
+  setUpAll(() {
+    registerFallbackValue(<String, dynamic>{});
+  });
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    await PresetSharedPreferences.init();
+  });
+
+  testWidgets('app pumps and shows the bottom navigation', (tester) async {
+    // Force a non-Android platform so Bluetooth paths (ConnectionPage
+    // initState) resolve to no-ops during the initial build. Reset before the
+    // test body returns (framework asserts foundation debug vars are unset).
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+
+    final transport = MockEffectTransport();
+    when(() => transport.isSupported).thenReturn(false);
+    when(() => transport.isConnected).thenReturn(false);
+    when(() => transport.connect(any())).thenAnswer((_) async => false);
+    when(() => transport.send(any())).thenReturn(null);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          effectTransportProvider.overrideWithValue(transport),
+        ],
+        child: const MyApp(),
+      ),
     );
+    await tester.pump();
 
-    final json = pedalboardToWireJson(state);
+    // initState has run; reset the override before the body returns. `expect`
+    // triggers no rebuild, so no Bluetooth path is re-evaluated afterwards.
+    debugDefaultTargetPlatformOverride = null;
 
-    expect(json['isPedalBoardActive'], true);
-    final effects = json['effects'] as List;
-    expect(effects.length, 1);
-    expect(effects.first['name'], 'Echo');
-    expect(effects.first['order'], 0);
-    expect(effects.first['parameters'], [
-      {'name': 'LEVEL', 'value': 42},
-    ]);
+    // The three-tab bottom navigation from HomePage renders.
+    expect(find.byType(BottomNavigationBar), findsOneWidget);
   });
 }
