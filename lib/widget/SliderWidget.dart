@@ -3,6 +3,7 @@ import 'package:bc_ui_flutter/widget/CustomSliderThumbCircle.dart';
 
 import '../model/SliderController.dart';
 
+// ignore: must_be_immutable
 class SliderWidget extends StatefulWidget {
   final double sliderHeight;
   final int min;
@@ -31,7 +32,7 @@ class SliderWidget extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _SliderWidgetState createState() => _SliderWidgetState();
+  State<SliderWidget> createState() => _SliderWidgetState();
 }
 
 class _SliderWidgetState extends State<SliderWidget>
@@ -102,8 +103,8 @@ class _SliderWidgetState extends State<SliderWidget>
               child: Center(
                 child: SliderTheme(
                   data: SliderTheme.of(context).copyWith(
-                    activeTrackColor: Colors.white.withOpacity(1),
-                    inactiveTrackColor: Colors.white.withOpacity(.5),
+                    activeTrackColor: Colors.white.withValues(alpha: 1),
+                    inactiveTrackColor: Colors.white.withValues(alpha: .5),
 
                     trackHeight: 4.0,
                     thumbShape: CustomSliderThumbCircle(
@@ -112,9 +113,9 @@ class _SliderWidgetState extends State<SliderWidget>
                       max: widget.max,
                       color: widget.color,
                     ),
-                    overlayColor: Colors.white.withOpacity(.4),
+                    overlayColor: Colors.white.withValues(alpha: .4),
                     activeTickMarkColor: Colors.white,
-                    inactiveTickMarkColor: Colors.red.withOpacity(.7),
+                    inactiveTickMarkColor: Colors.red.withValues(alpha: .7),
                   ),
                   child: Slider(
                     value: _currentValue,

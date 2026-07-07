@@ -1,13 +1,10 @@
-import 'package:bc_ui_flutter/model/AppColors.dart';
 import 'package:bc_ui_flutter/page/ConnectionPage.dart';
 import 'package:bc_ui_flutter/page/MainPage.dart';
-import 'package:bc_ui_flutter/page/PresetPage.dart';
 import 'package:bc_ui_flutter/page/HelpPage.dart';
-import 'package:bc_ui_flutter/page/MainPageTest.dart';
 import 'package:flutter/material.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -44,6 +41,10 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final isPortrait =
         MediaQuery.of(context).orientation == Orientation.portrait;
+    // BottomNavigationBar insets its content by the bottom safe area (e.g. the
+    // iPhone home indicator). Add it to the fixed height so the 34px icons keep
+    // their full 44px content area instead of overflowing.
+    final bottomInset = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       body: IndexedStack(
@@ -53,7 +54,7 @@ class _HomePageState extends State<HomePage> {
       bottomNavigationBar: !isPortrait && currentIndex == 1
           ? null
           : SizedBox(
-        height: 44,
+        height: 44 + bottomInset,
         child: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
           selectedItemColor: Colors.white,

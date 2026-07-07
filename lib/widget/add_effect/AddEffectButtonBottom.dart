@@ -9,7 +9,7 @@ import 'AddSimpleEffectWidget.dart';
 class AddEffectButtonBottom extends StatelessWidget {
   final Function insertItem;
 
-  const AddEffectButtonBottom({Key? key, required this.insertItem}) : super(key: key);
+  const AddEffectButtonBottom({super.key, required this.insertItem});
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +45,7 @@ class AddEffectButtonBottom extends StatelessWidget {
 class _AddEffectPopupCard extends StatelessWidget {
   final Function insertItem;
 
-  _AddEffectPopupCard({Key? key, required this.insertItem}) : super(key: key);
+  _AddEffectPopupCard({required this.insertItem});
 
   final List<String> items = List.from([
     Effect.ECHO,

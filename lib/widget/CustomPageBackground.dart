@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class CustomPageBackground extends StatelessWidget {
-  const CustomPageBackground({Key? key}) : super(key: key);
+  const CustomPageBackground({super.key});
 
   @override
   Widget build(BuildContext context) {

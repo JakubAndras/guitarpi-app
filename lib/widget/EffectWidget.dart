@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import '../model/SliderController.dart';
 import './SliderWidget.dart';
 
+// ignore: must_be_immutable
 class EffectWidget extends StatefulWidget {
   final String name;
   late bool isActive;
@@ -72,6 +73,7 @@ class _EffectWidgetState extends State<EffectWidget>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return buildWidget();
   }
 
@@ -210,7 +212,7 @@ class _EffectWidgetState extends State<EffectWidget>
                 thickness: 2,
               ),
               // Icons to change effect ordering
-              Container(
+              SizedBox(
                 height: isPortrait ? 46 : 28,
                 child: Row(
                   children: [
@@ -304,7 +306,7 @@ class _EffectWidgetState extends State<EffectWidget>
                       ),
                     ),
                     // Save preset
-                    Container(
+                    SizedBox(
                       width: isPortrait ? mobileWidth * 0.12 : 28,
                       child: IconButton(
                         padding: isPortrait
@@ -331,7 +333,7 @@ class _EffectWidgetState extends State<EffectWidget>
                       ),
                     ),
                     // Delete preset
-                    Container(
+                    SizedBox(
                       width: isPortrait ? mobileWidth * 0.12 : 28,
                       child: IconButton(
                         padding: isPortrait
@@ -444,7 +446,7 @@ class _EffectWidgetState extends State<EffectWidget>
           : const EdgeInsets.fromLTRB(0, 4, 0, 0),
       child: SliderWidget(
         name: parameter.name,
-        key: ValueKey(widget.name + '_' + parameter.name),
+        key: ValueKey('${widget.name}_${parameter.name}'),
         sliderHeight:
             isPortrait ? 45 : MediaQuery.of(context).size.width * 0.034,
         min: 0,
@@ -453,8 +455,8 @@ class _EffectWidgetState extends State<EffectWidget>
         setCurrentPresetToNull: setCurrentPresetToNull,
         sendData: _sendData,
         currentValue: SliderController()
-            .getSliderValueByParameterName(widget.name + '_' + parameter.name),
-        parentName: widget.name + '_' + parameter.name,
+            .getSliderValueByParameterName('${widget.name}_${parameter.name}'),
+        parentName: '${widget.name}_${parameter.name}',
         color: widget.color,
       ),
     );
@@ -508,7 +510,7 @@ class _EffectWidgetState extends State<EffectWidget>
       context: context,
       builder: (context) {
         return AlertDialog(
-          content: Container(
+          content: SizedBox(
             height: MediaQuery.of(context).orientation == Orientation.portrait
                 ? MediaQuery.of(context).size.height * 0.125
                 : MediaQuery.of(context).size.height * 0.24,
@@ -599,7 +601,7 @@ class _EffectWidgetState extends State<EffectWidget>
         widget.parameters.elementAt(i).value =
             widget.currentPreset!.parameters.elementAt(i).value;
         SliderController().setSliderValueByParameterName(
-            widget.name + '_' + widget.parameters.elementAt(i).name,
+            '${widget.name}_${widget.parameters.elementAt(i).name}',
             widget.currentPreset!.parameters.elementAt(i).value.toDouble());
       }
     });

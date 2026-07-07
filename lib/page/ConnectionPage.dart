@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:bc_ui_flutter/model/AppColors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
-import 'package:wakelock/wakelock.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
+
+import '../utils/BluetoothSupport.dart';
 
 import '../widget/CustomPageBackground.dart';
 import '../model/BluetoothServer.dart';
@@ -13,17 +15,14 @@ import './SelectBondedDevicePage.dart';
 class ConnectionPage extends StatefulWidget {
   final Function switchToMainPage;
 
-  ConnectionPage({required this.switchToMainPage});
+  const ConnectionPage({super.key, required this.switchToMainPage});
 
   @override
-  _ConnectionPage createState() => _ConnectionPage();
+  State<ConnectionPage> createState() => _ConnectionPage();
 }
 
 class _ConnectionPage extends State<ConnectionPage> {
   BluetoothState _bluetoothState = BluetoothState.UNKNOWN;
-
-  String _address = "...";
-  String _name = "...";
 
   Timer? _discoverableTimeoutTimer;
   bool displayStaysAwake = false;
@@ -32,32 +31,12 @@ class _ConnectionPage extends State<ConnectionPage> {
   void initState() {
     super.initState();
 
+    if (!isBluetoothSupported) return;
+
     // Get current state
     FlutterBluetoothSerial.instance.state.then((state) {
       setState(() {
         _bluetoothState = state;
-      });
-    });
-
-    Future.doWhile(() async {
-      // Wait if adapter not enabled
-      if ((await FlutterBluetoothSerial.instance.isEnabled) ?? false) {
-        return false;
-      }
-      await Future.delayed(const Duration(milliseconds: 0xDD));
-      return true;
-    }).then((_) {
-      // Update the address field
-      FlutterBluetoothSerial.instance.address.then((address) {
-        setState(() {
-          _address = address!;
-        });
-      });
-    });
-
-    FlutterBluetoothSerial.instance.name.then((name) {
-      setState(() {
-        _name = name!;
       });
     });
 
@@ -76,7 +55,9 @@ class _ConnectionPage extends State<ConnectionPage> {
 
   @override
   void dispose() {
-    FlutterBluetoothSerial.instance.setPairingRequestHandler(null);
+    if (isBluetoothSupported) {
+      FlutterBluetoothSerial.instance.setPairingRequestHandler(null);
+    }
     _discoverableTimeoutTimer?.cancel();
     super.dispose();
   }
@@ -102,15 +83,15 @@ class _ConnectionPage extends State<ConnectionPage> {
               SwitchListTile(
                 title: const Text('Display stays awake'),
                 value: displayStaysAwake,
-                activeColor: AppColors.mainColor,
+                activeThumbColor: AppColors.mainColor,
                 onChanged: (bool value) async {
                   setState(() {
                     displayStaysAwake = value;
                     if (displayStaysAwake) {
-                      Wakelock.enable();
+                      WakelockPlus.enable();
                     }
                     else {
-                      Wakelock.disable();
+                      WakelockPlus.disable();
                     }
                   });
                 },
@@ -118,15 +99,20 @@ class _ConnectionPage extends State<ConnectionPage> {
               SwitchListTile(
                 title: const Text('Enable Bluetooth'),
                 value: _bluetoothState.isEnabled,
-                activeColor: AppColors.mainColor,
+                activeThumbColor: AppColors.mainColor,
                 onChanged: (bool value) {
+                  if (!isBluetoothSupported) {
+                    showBluetoothUnsupported(context);
+                    return;
+                  }
                   // Do the request and update with the true value then
                   future() async {
                     // async lambda seems to not working
-                    if (value)
+                    if (value) {
                       await FlutterBluetoothSerial.instance.requestEnable();
-                    else
+                    } else {
                       await FlutterBluetoothSerial.instance.requestDisable();
+                    }
                   }
 
                   future().then((_) {
@@ -140,6 +126,10 @@ class _ConnectionPage extends State<ConnectionPage> {
                 trailing: ElevatedButton(
                   child: const Text('Settings'),
                   onPressed: () {
+                    if (!isBluetoothSupported) {
+                      showBluetoothUnsupported(context);
+                      return;
+                    }
                     FlutterBluetoothSerial.instance.openSettings();
                   },
                 ),
@@ -152,6 +142,10 @@ class _ConnectionPage extends State<ConnectionPage> {
                 title: ElevatedButton(
                     child: const Text('Explore discovered devices'),
                     onPressed: () async {
+                      if (!isBluetoothSupported) {
+                        showBluetoothUnsupported(context);
+                        return;
+                      }
                       final BluetoothDevice? selectedDevice =
                           await Navigator.of(context).push(
                         MaterialPageRoute(
@@ -162,10 +156,10 @@ class _ConnectionPage extends State<ConnectionPage> {
                       );
 
                       if (selectedDevice != null) {
-                        print(
-                            'Discovery -> selected ' + selectedDevice.address);
+                        debugPrint(
+                            'Discovery -> selected ${selectedDevice.address}');
                       } else {
-                        print('Discovery -> no device selected');
+                        debugPrint('Discovery -> no device selected');
                       }
                     }),
               ),
@@ -173,6 +167,10 @@ class _ConnectionPage extends State<ConnectionPage> {
                 title: ElevatedButton(
                   child: const Text('Connect to your Raspberry Pi'),
                   onPressed: () async {
+                    if (!isBluetoothSupported) {
+                      showBluetoothUnsupported(context);
+                      return;
+                    }
                     BluetoothServer.server = await Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (context) {
@@ -182,11 +180,12 @@ class _ConnectionPage extends State<ConnectionPage> {
                       ),
                     );
 
+                    if (!context.mounted) return;
                     if (BluetoothServer.server != null) {
-                      print('Connect -> selected ' + BluetoothServer.server!.address);
+                      debugPrint('Connect -> selected ${BluetoothServer.server!.address}');
                       _start(context, BluetoothServer.server!);
                     } else {
-                      print('Connect -> no device selected');
+                      debugPrint('Connect -> no device selected');
                     }
                   },
                 ),

@@ -7,10 +7,10 @@ import '../model/Effect.dart';
 import '../widget/CustomPageBackground.dart';
 
 class PresetPage extends StatefulWidget {
-  PresetPage();
+  const PresetPage({super.key});
 
   @override
-  _PresetPage createState() => _PresetPage();
+  State<PresetPage> createState() => _PresetPage();
 }
 
 class _PresetPage extends State<PresetPage> {

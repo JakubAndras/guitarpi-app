@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../model/AppColors.dart';
@@ -12,8 +11,7 @@ class AddSimpleEffectWidget extends StatelessWidget {
       {required this.name,
       required this.insertItem,
       required this.color,
-      Key? key})
-      : super(key: key);
+      super.key});
 
   @override
   Widget build(BuildContext context) {

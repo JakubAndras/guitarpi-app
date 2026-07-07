@@ -4,9 +4,9 @@ import 'package:flutter/widgets.dart';
 
 class CustomRectTween extends RectTween {
   CustomRectTween({
-    @required Rect? begin,
-    @required Rect? end,
-  }) : super(begin: begin, end: end);
+    @required super.begin,
+    @required super.end,
+  });
 
   @override
   Rect lerp(double t) {

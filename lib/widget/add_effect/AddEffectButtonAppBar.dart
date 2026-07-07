@@ -12,11 +12,10 @@ class AddEffectButtonAppBar extends StatelessWidget {
   final bool isPortrait;
 
   const AddEffectButtonAppBar(
-      {Key? key,
+      {super.key,
       required this.insertItem,
       required this.size,
-      required this.isPortrait})
-      : super(key: key);
+      required this.isPortrait});
 
   @override
   Widget build(BuildContext context) {
@@ -55,8 +54,7 @@ class _AddEffectPopupCard extends StatelessWidget {
   final bool isPortrait;
 
   _AddEffectPopupCard(
-      {Key? key, required this.insertItem, required this.isPortrait})
-      : super(key: key);
+      {required this.insertItem, required this.isPortrait});
 
   final List<String> items = List.from([
     Effect.ECHO,

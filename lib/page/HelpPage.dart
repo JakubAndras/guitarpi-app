@@ -3,10 +3,10 @@ import 'package:bc_ui_flutter/widget/CustomPageBackground.dart';
 import 'package:flutter/material.dart';
 
 class HelpPage extends StatefulWidget {
-  HelpPage();
+  const HelpPage({super.key});
 
   @override
-  _HelpPage createState() => _HelpPage();
+  State<HelpPage> createState() => _HelpPage();
 }
 
 class _HelpPage extends State<HelpPage> {

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -7,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 
 import '../model/AppColors.dart';
+import '../utils/BluetoothSupport.dart';
 import '../model/Effect.dart';
 import '../model/EffectPresetModel.dart';
 import '../widget/CustomPageBackground.dart';
@@ -15,13 +15,18 @@ import '../widget/add_effect/AddEffectButtonAppBar.dart';
 
 // Pedalboard page
 
+// ignore: must_be_immutable
 class MainPage extends StatefulWidget {
+  // The widget intentionally keeps a reference to its State so the parent can
+  // trigger initConnection() after the page is built.
+  // ignore: library_private_types_in_public_api
   late _MainPage mainPage;
 
-  MainPage({Key? key}) : super(key: key);
+  MainPage({super.key});
 
   @override
-  _MainPage createState() {
+  // ignore: no_logic_in_create_state
+  State<MainPage> createState() {
     mainPage = _MainPage();
     return mainPage;
   }
@@ -59,15 +64,16 @@ class _MainPage extends State<MainPage> {
   }
 
   void initConnection() {
+    if (!isBluetoothSupported) return;
     BluetoothConnection.toAddress(BluetoothServer.server?.address)
-        .then((_connection) {
-      connection = _connection;
+        .then((connection) {
+      connection = connection;
       setState(() {
         isConnecting = false;
         isDisconnecting = false;
       });
     }).catchError((error) {
-      print(error);
+      debugPrint('$error');
     });
   }
 
@@ -212,7 +218,7 @@ class _MainPage extends State<MainPage> {
                 ? const EdgeInsets.fromLTRB(0, 0, 0, 0)
                 : EdgeInsets.fromLTRB(
                     MediaQuery.of(context).size.width * 0.92, 0, 0, 0),
-            child: Container(
+            child: SizedBox(
               width: isPortrait ? 0 : mobileWidth * 0.08,
               height: isPortrait ? 0 : mobileHeight,
               child: isPortrait
