@@ -266,13 +266,13 @@ void main() {
         () async {
       await container.read(connectionProvider.notifier).connect('AA:BB:CC:DD:EE:FF');
       verify(() => transport.connect('AA:BB:CC:DD:EE:FF')).called(1);
-      expect(container.read(connectionProvider).valueOrNull, isTrue);
+      expect(container.read(connectionProvider).value, isTrue);
     });
 
     test('a false connect result surfaces as AsyncData(false)', () async {
       when(() => transport.connect(any())).thenAnswer((_) async => false);
       await container.read(connectionProvider.notifier).connect('AA:BB:CC:DD:EE:FF');
-      expect(container.read(connectionProvider).valueOrNull, isFalse);
+      expect(container.read(connectionProvider).value, isFalse);
     });
 
     test('a thrown connect error surfaces as AsyncError (guarded, no throw)',

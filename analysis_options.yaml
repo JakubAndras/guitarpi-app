@@ -9,6 +9,12 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+# Enable the Riverpod lint rules (see RIVERPOD.md, rule 10). riverpod_lint 3.1+
+# uses the first-party analysis_server_plugin — rules run in-IDE and via
+# `dart analyze` (no custom_lint / no separate runner).
+plugins:
+  riverpod_lint: ^3.1.4
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`

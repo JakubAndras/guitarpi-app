@@ -40,7 +40,7 @@ dependencies:
   wakelock_plus: ^1.2.5
 
   # State management + dependency injection.
-  flutter_riverpod: ^2.5.1
+  flutter_riverpod: ^3.0.0
   # Value equality for immutable domain entities (no codegen).
   equatable: ^2.0.5
 
@@ -63,6 +63,10 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  # Enforce the Riverpod conventions (see RIVERPOD.md, rule 10) — without this
+  # the rules are review-only, not CI. riverpod_lint 3.1+ uses the first-party
+  # analysis_server_plugin (no custom_lint); it runs via `dart analyze`.
+  riverpod_lint: ^3.1.4
   flutter_launcher_icons: ^0.14.1
 
 flutter_launcher_icons:

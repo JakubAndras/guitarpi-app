@@ -8,8 +8,12 @@
 
 ## Základ (platí bez výjimky)
 
-- **Riverpod 2.x, manuálně — bez codegenu.** Žádné `@riverpod` / `riverpod_generator`.
+- **Riverpod 3.x, manuálně — bez codegenu.** Žádné `@riverpod` / `riverpod_generator`.
   (Codegen `json_serializable` pro DTO/DB je OK — netýká se Riverpodu.)
+  **Proč ne codegen:** vědomá odchylka od oficiálního doporučení. Chci jeden mentální model
+  přenositelný mezi projekty, žádnou build-fázi (`build_runner`) a plnou čitelnost providerů
+  v diffu. Cena: víc boilerplate a ruční typové argumenty (`AsyncNotifierProvider<N, T>`) —
+  bereme na vědomí.
 - **Jen moderní API:** `Notifier` / `AsyncNotifier`. **Nikdy** `StateNotifier`,
   `ChangeNotifier`, `StateProvider` (viz pravidlo 1).
 - **Immutabilní stav** + ruční `copyWith` + `Equatable`.
@@ -19,8 +23,10 @@
 ## 10 pravidel
 
 ### 1. Stav jen přes `Notifier` / `AsyncNotifier`
-`StateProvider` / `StateNotifierProvider` / `ChangeNotifierProvider` **zakázány**. Jediná
-výjimka: čistě lokální, efemérní UI toggle bez byznys významu (a i to raději `Notifier`).
+`StateProvider` / `StateNotifierProvider` / `ChangeNotifierProvider` **zakázány** pro jakýkoli
+sdílený nebo byznysový stav. Čistě lokální, efemérní UI toggle (bez byznys významu) neřeš
+providerem vůbec — patří do lokálního stavu widgetu (`setState` / `ValueNotifier`). Platí tedy
+jednoduše: **provider = sdílený stav → vždy `Notifier` / `AsyncNotifier`.**
 
 ```dart
 // ❌ ne
@@ -41,14 +47,21 @@ class ConnectionNotifier extends AsyncNotifier<bool> {
   Future<bool> build() async => false;
 
   Future<void> connect(String address) async {
-    state = const AsyncLoading();
+    // Zachovej předchozí data během loadingu (UI nebliká).
+    state = const AsyncLoading<bool>().copyWithPrevious(state);
     state = await AsyncValue.guard(
       () => ref.read(effectTransportProvider).connect(address),
     );
   }
 }
 ```
-UI pak čte `state.when(data:…, loading:…, error:…)` nebo `valueOrNull` / `hasError`.
+UI pak čte `state.when(data:…, loading:…, error:…)` nebo `state.value` (nullable) / `hasError`.
+
+> **Pozn. k modelování:** příklad výše (`AsyncNotifier<bool>`) je **záměrně** ten triviální
+> dvoustavový případ (odpovídá reálnému `ConnectionNotifier` v guitarpi) — tady `AsyncValue`
+> sedí. Jakmile má stav víc než dvě polohy (`disconnected`/`connecting`/`connected`/`error`),
+> `AsyncValue` přestává stačit (míchá „načítá se" s byznys hodnotou) → modeluj to jako **sealed
+> class / enum v `Notifier`** se stavovým strojem, ne přes `AsyncNotifier`.
 
 ### 3. Hranice přes abstraktní rozhraní (DIP)
 Repozitáře / služby / transporty definuj jako **abstraktní rozhraní v `domain/`**, implementaci
@@ -67,8 +80,13 @@ final effectTransportProvider = Provider<EffectTransport>((ref) =>
 Výhoda: záměnnost (Android/iOS/BLE), triviální mockování v testech.
 
 ### 4. Modely immutable + `Equatable` + ruční `copyWith`
-Žádný `freezed` (drží linii „bez codegenu"). `Equatable` dává rovnost/hashCode zdarma → čistší
-rebuild logika i asserty v testech.
+`Equatable` dává rovnost/hashCode zdarma → čistší rebuild logika i asserty v testech.
+**Proč ne `freezed`:** stejná odchylka jako u codegenu (viz Základ) — `freezed` je průmyslový
+standard, ale táhne `build_runner`. Vědomě volíme víc boilerplate za nulovou build-fázi.
+**Výjimka pro sealed stavové stroje:** u víc-stavových modelů z pravidla 2 (sealed unie
+s pattern-matchingem) je ruční zápis výrazně dražší než `Equatable` datová třída. Tam je
+`freezed` *lokálně* povolený jako vědomá výjimka — buď ho neber, nebo ruční sealed classes
+přijmi i s jejich cenou; nemíchej to nahodile.
 
 ```dart
 class Parameter extends Equatable {
@@ -80,6 +98,14 @@ class Parameter extends Equatable {
   List<Object?> get props => [name, value];
 }
 ```
+
+> **Past ručního `copyWith`:** idiom `x ?? this.x` **neumí** nastavit nullable pole zpět na
+> `null`. Když má model nullable pole, které se reálně nuluje, použij sentinel:
+> ```dart
+> static const _unset = Object();
+> Foo copyWith({Object? bar = _unset}) =>
+>     Foo(bar: identical(bar, _unset) ? this.bar : bar as String?);
+> ```
 
 ### 5. Umístění providerů: co-location + `core/di`
 - **Notifier providery** žijí **vedle svého notifieru** (v `presentation/…`).
@@ -123,16 +149,35 @@ final c = ProviderContainer(overrides: [
 addTearDown(c.dispose);
 await c.read(connectionProvider.notifier).connect('AA:BB');
 verify(() => mockTransport.connect('AA:BB')).called(1);
-expect(c.read(connectionProvider).valueOrNull, isTrue);
+expect(c.read(connectionProvider).value, isTrue);
 ```
 
-### 9. `family` / `autoDispose`: nepovinné, cílené
-Nejsou default. Sáhni po nich, když dávají smysl: `family` pro per-id stav, `autoDispose` pro
-screen-scoped / drahé providery, které mají zaniknout. Jinak global + kept-alive.
+### 9. `family` / `autoDispose`: cílené, s vědomím 3.x defaultů
+`family` pro per-id stav. `autoDispose` pro screen-scoped / drahé providery, které mají zaniknout;
+`ref.keepAlive()` jen tam, kde stav musí přežít odchod z obrazovky. Riverpod 3 posouvá
+`autoDispose` jako preferovaný směr (v codegenu je default) — u manuálního API proto **defaultně
+preferuj `autoDispose`** a global kept-alive měj jako vědomou výjimku pro app-scoped stav
+(session, connection, prefs).
 
 ### 10. Governance
 Tenhle `RIVERPOD.md` v každém repu + odkaz z `CLAUDE.md`. U větších appek přidej i **mapu
 providerů** (co existuje, co na čem závisí), ať se strom nerozjede.
+
+**Vynucení, ne jen dohoda:** `flutter_lints` tahle pravidla nepokryje. Zapni `riverpod_lint`,
+který hlídá typické chyby (public property na notifieru, špatné `read`/`watch` v `build`,
+scoped providery bez `dependencies`, …). Bez toho jsou pravidla 1/2/6 jen věc code review, ne CI.
+
+`riverpod_lint` **3.1+** používá první-stranný `analysis_server_plugin` (žádný `custom_lint`,
+žádný samostatný runner) — zapíná se v `analysis_options.yaml` a běží přímo přes `dart analyze`:
+
+```yaml
+# analysis_options.yaml
+plugins:
+  riverpod_lint: ^3.1.4
+```
+Pozor: `riverpod_lint 3.1+` táhne `analyzer ^12`, takže vyžaduje **Dart ≥ 3.10** (Flutter ≥ 3.38;
+guitarpi jede na Flutter 3.44.5 přes `fvm`). Na starším SDK zůstaň na `riverpod_lint 3.0.x`,
+které ještě jelo přes `custom_lint`.
 
 ---
 
@@ -150,9 +195,18 @@ providerů** (co existuje, co na čem závisí), ať se strom nerozjede.
 
 ```yaml
 dependencies:
-  flutter_riverpod: ^2.5.0
+  flutter_riverpod: ^3.0.0
   equatable: ^2.0.5
 dev_dependencies:
-  mocktail: ^1.0.0
+  mocktail: ^1.0.4
   flutter_lints: ^6.0.0
+  # Vynucení konvencí (viz pravidlo 10). 3.1+ = analysis_server_plugin,
+  # zapni v analysis_options.yaml a spouštěj přes `dart analyze` (Dart ≥ 3.10).
+  riverpod_lint: ^3.1.4
 ```
+
+> **Migrace 2.x → 3.x:** manuální API (`Notifier` / `AsyncNotifier` / `Provider` /
+> `ProviderContainer` / `overrideWith(Value)`) je zdrojově z velké části kompatibilní. Hlavní
+> body ke kontrole: přejmenované/deprecated členy, `Ref` typování a chování `autoDispose`.
+> Referenční repo (guitarpi) na 3.x **už běží** — `flutter_riverpod` resolved na `3.3.2`
+> (constraint `^3.0.0`). Tenhle dokument popisuje cílový stav 3.x, ne plán migrace.

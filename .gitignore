@@ -20,6 +20,11 @@
 # is commented out by default.
 #.vscode/
 
+# FVM — pin the version (.fvm/fvm_config.json is committed), ignore the local
+# SDK symlink and cached versions.
+.fvm/flutter_sdk
+.fvm/versions
+
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id
