@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../model/AppColors.dart';
+import 'package:bc_ui_flutter/core/theme/app_colors.dart';
 
 class AddSimpleEffectWidget extends StatelessWidget {
   final String name;

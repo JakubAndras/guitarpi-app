@@ -1,4 +1,4 @@
-import 'package:bc_ui_flutter/model/AppColors.dart';
+import 'package:bc_ui_flutter/core/theme/app_colors.dart';
 import 'package:bc_ui_flutter/model/Effect.dart';
 import 'package:flutter/material.dart';
 import 'package:bc_ui_flutter/widget/add_effect/CustomRectTween.dart';

@@ -1,4 +1,4 @@
-import 'package:bc_ui_flutter/model/AppColors.dart';
+import 'package:bc_ui_flutter/core/theme/app_colors.dart';
 import 'package:bc_ui_flutter/widget/CustomPageBackground.dart';
 import 'package:flutter/material.dart';
 
