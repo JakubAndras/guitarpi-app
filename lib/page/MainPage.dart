@@ -5,7 +5,7 @@ import '../domain/entities/effect.dart';
 import '../presentation/pedalboard/widgets/effect_card.dart';
 import '../presentation/pedalboard/widgets/pedalboard_metrics.dart';
 import '../presentation/pedalboard/widgets/pedalboard_toggle.dart';
-import '../presentation/providers.dart';
+import '../presentation/pedalboard/pedalboard_notifier.dart';
 import '../widget/CustomPageBackground.dart';
 import '../widget/add_effect/AddEffectButtonAppBar.dart';
 

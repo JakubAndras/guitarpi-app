@@ -4,8 +4,6 @@ import 'package:bc_ui_flutter/page/HelpPage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'presentation/providers.dart';
-
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
@@ -23,9 +21,8 @@ class _HomePageState extends ConsumerState<HomePage> {
   ];
 
   void switchToMainPage() {
-    // Trigger the connection through the notifier instead of holding the page
-    // State, then move to the pedalboard tab.
-    ref.read(pedalboardProvider.notifier).connect();
+    // ConnectionPage already kicked off the connection via ConnectionNotifier;
+    // here we only move to the pedalboard tab.
     setState(() {
       currentIndex = 1;
     });

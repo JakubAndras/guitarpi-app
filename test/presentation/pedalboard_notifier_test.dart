@@ -11,8 +11,9 @@ import 'package:bc_ui_flutter/domain/entities/pedalboard.dart';
 import 'package:bc_ui_flutter/domain/entities/preset.dart';
 import 'package:bc_ui_flutter/domain/repositories/effect_transport.dart';
 import 'package:bc_ui_flutter/domain/repositories/preset_repository.dart';
+import 'package:bc_ui_flutter/core/di/providers.dart';
+import 'package:bc_ui_flutter/presentation/connection/connection_notifier.dart';
 import 'package:bc_ui_flutter/presentation/pedalboard/pedalboard_notifier.dart';
-import 'package:bc_ui_flutter/presentation/providers.dart';
 
 class MockEffectTransport extends Mock implements EffectTransport {}
 
@@ -37,13 +38,11 @@ void main() {
   // Reads the current state freshly on each access.
   PedalboardState state() => container.read(pedalboardProvider);
 
-  ProviderContainer makeContainer({String? address}) {
+  ProviderContainer makeContainer() {
     final c = ProviderContainer(
       overrides: [
         effectTransportProvider.overrideWithValue(transport),
         presetRepositoryProvider.overrideWithValue(FakePresetRepository()),
-        if (address != null)
-          selectedDeviceAddressProvider.overrideWith((ref) => address),
       ],
     );
     addTearDown(c.dispose);
@@ -262,27 +261,25 @@ void main() {
     });
   });
 
-  group('connect', () {
-    test('with a selected address: calls connect and sets status true',
+  group('ConnectionNotifier', () {
+    test('connect() calls transport and exposes connected via AsyncData(true)',
         () async {
-      final c = makeContainer(address: 'AA:BB:CC:DD:EE:FF');
-      await c.read(pedalboardProvider.notifier).connect();
+      await container.read(connectionProvider.notifier).connect('AA:BB:CC:DD:EE:FF');
       verify(() => transport.connect('AA:BB:CC:DD:EE:FF')).called(1);
-      expect(c.read(connectionStatusProvider), isTrue);
+      expect(container.read(connectionProvider).valueOrNull, isTrue);
     });
 
-    test('with a false connect result: sets status false', () async {
+    test('a false connect result surfaces as AsyncData(false)', () async {
       when(() => transport.connect(any())).thenAnswer((_) async => false);
-      final c = makeContainer(address: 'AA:BB:CC:DD:EE:FF');
-      await c.read(pedalboardProvider.notifier).connect();
-      expect(c.read(connectionStatusProvider), isFalse);
+      await container.read(connectionProvider.notifier).connect('AA:BB:CC:DD:EE:FF');
+      expect(container.read(connectionProvider).valueOrNull, isFalse);
     });
 
-    test('with null address: does not connect and stays false', () async {
-      // Default container has no address override (null).
-      await notifier.connect();
-      verifyNever(() => transport.connect(any()));
-      expect(container.read(connectionStatusProvider), isFalse);
+    test('a thrown connect error surfaces as AsyncError (guarded, no throw)',
+        () async {
+      when(() => transport.connect(any())).thenThrow(Exception('boom'));
+      await container.read(connectionProvider.notifier).connect('AA:BB:CC:DD:EE:FF');
+      expect(container.read(connectionProvider).hasError, isTrue);
     });
   });
 }

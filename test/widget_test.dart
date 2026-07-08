@@ -18,7 +18,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:bc_ui_flutter/app.dart';
 import 'package:bc_ui_flutter/domain/repositories/effect_transport.dart';
-import 'package:bc_ui_flutter/presentation/providers.dart';
+import 'package:bc_ui_flutter/core/di/providers.dart';
 import 'package:bc_ui_flutter/utils/PresetSharedPreferences.dart';
 
 class MockEffectTransport extends Mock implements EffectTransport {}

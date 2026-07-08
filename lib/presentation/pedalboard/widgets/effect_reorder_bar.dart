@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../providers.dart';
+import '../pedalboard_notifier.dart';
 import 'pedalboard_metrics.dart';
 
 /// Left/right arrows that move the effect within the chain. Extracted verbatim

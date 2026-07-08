@@ -5,7 +5,7 @@ import '../../data/dto/pedalboard_wire_dto.dart';
 import '../../domain/entities/effect.dart';
 import '../../domain/entities/parameter.dart';
 import '../../domain/entities/pedalboard.dart';
-import '../providers.dart';
+import '../../core/di/providers.dart';
 
 /// Owns ALL pedalboard state that used to live in widget fields
 /// (`MainPage.items`, `EffectWidget.isActive`/`parameters`) and in global
@@ -135,16 +135,13 @@ class PedalboardNotifier extends Notifier<PedalboardState> {
     if (state.isActive && _catalog[effectName]!.isActive) _send();
   }
 
-  /// Connect the transport to the currently selected device address and record
-  /// the result in [connectionStatusProvider].
-  Future<void> connect() async {
-    final transport = ref.read(effectTransportProvider);
-    final address = ref.read(selectedDeviceAddressProvider);
-    if (address == null) {
-      ref.read(connectionStatusProvider.notifier).state = false;
-      return;
-    }
-    final ok = await transport.connect(address);
-    ref.read(connectionStatusProvider.notifier).state = ok;
-  }
 }
+
+/// Single source of truth for the pedalboard (active flag + ordered chain,
+/// per-effect parameters and on/off state). Co-located with its notifier.
+///
+/// Connection lifecycle lives in `ConnectionNotifier` (connection/), not here.
+final pedalboardProvider =
+    NotifierProvider<PedalboardNotifier, PedalboardState>(
+  PedalboardNotifier.new,
+);

@@ -8,7 +8,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../utils/BluetoothSupport.dart';
 
-import '../presentation/providers.dart';
+import '../presentation/connection/connection_notifier.dart';
 import '../widget/CustomPageBackground.dart';
 import './DiscoveryPage.dart';
 import './SelectBondedDevicePage.dart';
@@ -185,10 +185,11 @@ class _ConnectionPage extends ConsumerState<ConnectionPage> {
                     if (!context.mounted) return;
                     if (selected != null) {
                       debugPrint('Connect -> selected ${selected.address}');
-                      // Publish the chosen device's address so the pedalboard
-                      // notifier can connect to it (replaces BluetoothServer).
-                      ref.read(selectedDeviceAddressProvider.notifier).state =
-                          selected.address;
+                      // Kick off the connection (fire-and-forget) and move to
+                      // the pedalboard; ConnectionNotifier tracks the outcome.
+                      ref
+                          .read(connectionProvider.notifier)
+                          .connect(selected.address);
                       _start(context, selected);
                     } else {
                       debugPrint('Connect -> no device selected');
